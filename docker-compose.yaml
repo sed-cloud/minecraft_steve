@@ -1,0 +1,36 @@
+version: '3'
+services:
+  minecraft_steve-db:
+    image: postgres
+    container_name: minecraft_steve-postgres-container
+    ports:
+      - "5400:5432"
+    env_file:
+      - database.env
+    volumes:
+      - ./postgres.conf:/etc/postgresql/postgresql.conf
+      - ./minecraft_steve/internal/:/docker-entrypoint-initdb.d/
+      - database-data:/var/lib/postgresql/data/
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    restart: unless-stopped
+    
+  minecraft_steve-service:
+    build:
+      context: .
+    command: uvicorn minecraft_steve.main:app --reload
+    volumes:
+      - .:/workarea
+    depends_on: 
+      - minecraft_steve-db
+      
+  test:
+    build: .
+    command: pytest -v
+    volumes:
+      - .:/workarea
+    depends_on: 
+      - minecraft_steve-db
+      - minecraft_steve-service
+        
+volumes:
+  database-data:
